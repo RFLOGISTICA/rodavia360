@@ -55,7 +55,10 @@ try { RDV.ass = JSON.parse(localStorage.getItem("rdv-assinatura") || "null"); } 
 
 function rdvEmpresaId() { return RDV.ass && RDV.ass.empresa_id ? String(RDV.ass.empresa_id) : ""; }
 function rdvAreasDoPlano() {
-  if (RDV.ass && Array.isArray(RDV.ass.areas) && RDV.ass.areas.length) return RDV.ass.areas;
+  if (RDV.ass && Array.isArray(RDV.ass.areas) && RDV.ass.areas.length) {
+    // RDV v12: a Logística Reversa vale para TODOS os planos -- entra mesmo que a assinatura guardada no aparelho seja de antes dela
+    return RDV.ass.areas.indexOf("reversa") === -1 ? RDV.ass.areas.concat(["reversa"]) : RDV.ass.areas;
+  }
   return RDV.ass && RDV.ass.plano === "macro" ? RDV_AREAS_MACRO : RDV_AREAS_BASICO;
 }
 function rdvAreaLiberada(id) {
@@ -125,12 +128,13 @@ function rdvEmbrulhar(sb) {
 }
 </script>
 
-<title>Rodavia 360 — Gestão de Frota (v11)</title>
+<title>Rodavia 360 — Gestão de Frota (v12)</title>
 <meta name="rf-sistema" content="RDV">
 <meta name="rf-sistema-nome" content="Rodavia 360">
-<meta name="rf-versao" content="v11">
+<meta name="rf-versao" content="v12">
 <meta name="rf-data" content="2026-10-16">
 <meta name="rf-cliente" content="RF Sistemas (assinantes do Rodavia 360)">
+<!-- RDV v12 (17/10/2026): LOGÍSTICA REVERSA -- a área não aparecia para quem já estava logado, porque a lista de áreas do plano fica guardada no aparelho desde o login e era de antes da reversa. Agora ela entra sempre (vale para todos os planos). -->
 <!-- RDV v11 (17/10/2026): CARREGAMENTO 3D -- a logo do Rodavia 360 ganhou destaque: cabeçalho próprio com a logo colorida grande (fundo transparente, brilho dourado), título "Carregamento 3D", nome da empresa e resumo do módulo; portal do gestor também com a logo colorida. Impressões continuam com a logo preto e branco. -->
 <!-- RDV v10 (17/10/2026): LOGÍSTICA REVERSA -- motorista com 3 botões em toda parada (Cliente recusou / Produto com avaria / Endereço não encontrado), alerta na hora para o gestor, área "Logística Reversa" com o impacto (caixa não realizado, frete não faturado, custo do retorno, parado no almoxarifado, prejuízo, taxa de retorno, por carga e por causa), entrada no almoxarifado por bip com "volta ao mesmo cliente / outro destino", saída, reentrega e histórico permanente (tabela reversa_eventos, só acrescenta). Nos dois planos. -->
 <!-- RDV v9 (17/10/2026): CARREGAMENTO 3D -- ícone novo da área: caminhão 3D realista com o baú carregado à vista (tirado do próprio 3D do sistema). -->
@@ -1119,7 +1123,7 @@ function rdvEmbrulhar(sb) {
      e sobe na proxima abertura.
    - Nao grava dado de carga nem foto: so mensagem de erro e contexto.
    Consulta: Supabase > Table editor > rf_logs (so admin le).              */
-var RF_SISTEMA = { codigo: "RDV", nome: "Rodavia 360", versao: "v11" };
+var RF_SISTEMA = { codigo: "RDV", nome: "Rodavia 360", versao: "v12" };
 (function () {
   var FILA = "rf-logs-fila-v1", MAX = 50, enviando = false;
 
@@ -28966,7 +28970,7 @@ var ABAS_DEF = [
   { id: "viagem", label: "🛣️ Viagens", grupo: "VIAGENS" },   // v212: era "Despesas de Viagem"; v225: ícone padronizado
   { id: "abastecimento", label: "⛽ Abastecimento", grupo: "VIAGENS" },
   { id: "statusdia", label: "📍 Status do Dia", grupo: "VIAGENS" },
-  { id: "reversa", label: "↩️ Logística Reversa", grupo: "VIAGENS" },   // logística reversa (17/10/2026)
+  { id: "reversa", label: "🔄 Logística Reversa", grupo: "VIAGENS" },   // logística reversa (17/10/2026)
   { id: "docsviagem", label: "📁 Documentos da Viagem", grupo: "VIAGENS" },   // v435
   { id: "extracaofiscal", label: "📦 Extração CT-e / MDF-e / CIOT", grupo: "VIAGENS" },   // v608
   { id: "motoristas", label: "Motoristas 💰", grupo: "VIAGENS" },
@@ -29024,7 +29028,7 @@ var TAB_DESCRICOES = {
   docsviagem: "Todos os documentos de cada viagem num lugar só: envio de CT-e e MDF-e na saída, pacote completo com canhotos no fim, busca de canhoto por NF e links para a Suzano",
   goiascarga: "Operação Goiás Atacado: importa o arquivo da carga, imprime uma etiqueta por volume, bipa o carregamento e a entrega e cria a rota do motorista",
   saoroquecarga: "Carregamento 3D: importa a carga (PDF das DANFEs), monta o baú por parada (mapa da doca), imprime etiqueta com a zona do baú, bipa carregamento e entrega e cria a rota do motorista",
-  reversa: "Logística reversa: o que voltou (recusa, avaria, endereço não encontrado), o impacto no caixa e no frete, a entrada por bip no almoxarifado e o histórico até a reentrega",
+  reversa: "O que voltou, o impacto no caixa, a entrada por bip e o histórico até a reentrega",
   statusdia: "Status diário das viagens em andamento: entregas feitas, situação e observações — atualizado pela carteira e pelo motorista",
   motoristas: "Pagamentos e saldo de cada motorista",
   financeiro: "Resultado financeiro do mês ativo",
