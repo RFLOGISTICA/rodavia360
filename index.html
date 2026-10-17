@@ -125,12 +125,13 @@ function rdvEmbrulhar(sb) {
 }
 </script>
 
-<title>Rodavia 360 — Gestão de Frota (v4)</title>
+<title>Rodavia 360 — Gestão de Frota (v5)</title>
 <meta name="rf-sistema" content="RDV">
 <meta name="rf-sistema-nome" content="Rodavia 360">
-<meta name="rf-versao" content="v4">
+<meta name="rf-versao" content="v5">
 <meta name="rf-data" content="2026-10-16">
 <meta name="rf-cliente" content="RF Sistemas (assinantes do Rodavia 360)">
+<!-- RDV v5 (17/10/2026): USUÁRIOS -- o abrir/fechar de cada login voltou a funcionar (a função tinha o mesmo nome da do cofre Pessoal e era sobrescrita). -->
 <!-- RDV v4 (17/10/2026): "Trocar minha senha"/"Resetar senha" abrem uma janela própria (o window.prompt era bloqueado no Chrome do tablet e o botão não fazia nada). -->
 <!-- RDV v3 (17/10/2026): assistente enxuto para o Rodavia (sai histórico de versões e regras dos clientes da RF; ~100 mil -> ~25 mil caracteres), título "Assistente Rodavia", e o Pente-fino não exige mais extrato Itaú/Nubank (só os bancos que a empresa importou). -->
 <!-- RDV v2 (16/10/2026): cliente e tarifa começam VAZIOS (antes todo assinante nascia com Leão, JT/Mateus, Mercante/JDL, Yamaha e a tarifa da JDL, que são da RF). -->
@@ -1112,7 +1113,7 @@ function rdvEmbrulhar(sb) {
      e sobe na proxima abertura.
    - Nao grava dado de carga nem foto: so mensagem de erro e contexto.
    Consulta: Supabase > Table editor > rf_logs (so admin le).              */
-var RF_SISTEMA = { codigo: "RDV", nome: "Rodavia 360", versao: "v4" };
+var RF_SISTEMA = { codigo: "RDV", nome: "Rodavia 360", versao: "v5" };
 (function () {
   var FILA = "rf-logs-fila-v1", MAX = 50, enviando = false;
 
@@ -29602,7 +29603,7 @@ function criarUsuarioSalvar() {
 }
 
 function pfPodeEditar(p) { return ehMaster() || !(pfEhMaster(p) || p.papel === "admin"); }   // v503
-function pfAbrir(id) { state._pfAberto = state._pfAberto || {}; state._pfAberto[id] = !state._pfAberto[id]; render(); }
+function usrAbrirLogin(id) { state._pfAberto = state._pfAberto || {}; state._pfAberto[id] = !state._pfAberto[id]; render(); }   // nome próprio: antes era pfAbrir, e a função pfAbrir da área Pessoal (v549) a sobrescrevia -- o abrir/fechar de cada login não fazia nada
 function atualizarPerfilCampo(id, campo, valor) {
   const p = (state._perfis || []).find((x) => String(x.id) === String(id));
   if (!p) return;
@@ -42774,7 +42775,7 @@ function renderTabela() {
         const resumo = master ? "vê tudo · controla os administradores" : p.papel === "admin" ? (rest ? nAbas + " aba(s) liberada(s)" : "todas as abas") : p.papel === "motorista" ? "placa " + (p.placa_motorista || "—") : p.papel === "cliente" ? (p.cliente_nome || "sem cliente") : nAbas + " aba(s)";
         return `
         <div style="border:1px solid ${master ? GOLD : aberto ? "#3a3a3a" : "#2A2A2A"};border-radius:10px;margin-bottom:8px;background:#0E0E0E;${p.ativo ? "" : "opacity:.6;"}">
-          <div onclick="pfAbrir('${p.id}')" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;cursor:pointer;">
+          <div onclick="usrAbrirLogin('${p.id}')" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 14px;cursor:pointer;">
             <span style="color:#777;font-size:12px;width:12px;">${aberto ? "▾" : "▸"}</span>
             <b style="color:#fff;font-size:14px;min-width:120px;">${esc(p.nome || "(sem nome)")}</b>
             ${master ? `<span style="font-size:10px;font-weight:900;color:#000;background:${GOLD};border-radius:4px;padding:1px 7px;">🛡️ MASTER</span>` : ""}
@@ -42782,7 +42783,7 @@ function renderTabela() {
             <span style="font-size:12px;color:#999;">${esc(p.email || "")}</span>
             <span style="font-size:11.5px;color:#bbb;">${esc(resumo)}</span>
             <span style="margin-left:auto;font-size:11px;color:${p.ativo ? "#66BB6A" : "#E57373"};">${p.ativo ? "● ativo" : "● desativado"}</span>
-            <button class="btn-outline" style="font-size:11px;padding:3px 10px;" onclick="event.stopPropagation();pfAbrir('${p.id}')">${aberto ? "fechar" : "abrir"}</button>
+            <button class="btn-outline" style="font-size:11px;padding:3px 10px;" onclick="event.stopPropagation();usrAbrirLogin('${p.id}')">${aberto ? "fechar" : "abrir"}</button>
           </div>
           ${!aberto ? "" : !pode ? `<div style="padding:0 14px 12px;color:#999;font-size:12px;">🔒 ${master ? "Este é o login master: só ele mesmo altera." : "Administrador: só o login master altera."}</div>` : `
         <div style="padding:4px 14px 14px;border-top:1px solid #1d1d1d;">
