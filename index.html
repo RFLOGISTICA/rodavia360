@@ -110,12 +110,13 @@ function rdvEmbrulhar(sb) {
 }
 </script>
 
-<title>Rodavia 360 — Gestão de Frota (v1)</title>
+<title>Rodavia 360 — Gestão de Frota (v2)</title>
 <meta name="rf-sistema" content="RDV">
 <meta name="rf-sistema-nome" content="Rodavia 360">
-<meta name="rf-versao" content="v1">
+<meta name="rf-versao" content="v2">
 <meta name="rf-data" content="2026-10-16">
 <meta name="rf-cliente" content="RF Sistemas (assinantes do Rodavia 360)">
+<!-- RDV v2 (16/10/2026): cliente e tarifa começam VAZIOS (antes todo assinante nascia com Leão, JT/Mateus, Mercante/JDL, Yamaha e a tarifa da JDL, que são da RF). -->
 <!-- RDV v1 (16/10/2026): RODAVIA 360 -- primeira versão do sistema vendido por assinatura, montada sobre a RFL v634. Banco próprio (projeto rf-logistica-recuperacao) compartilhado entre as empresas com trava por empresa; áreas liberadas pelo plano (Básico/Macro); limite de caminhões no app e no banco; aba Assinatura com o painel do dono; arquivos no bucket "rdv", uma pasta por empresa; áreas exclusivas da RF retiradas. As regras ficam juntas no bloco "RDV v1 -- REGRAS DO RODAVIA 360". -->
 <!-- v634 (16/10/2026): COMPRAS -- envio que caiu no meio (Failed to fetch) deixava a impressao digital do arquivo reservada para uma compra que nao existe, e a 2a tentativa dava "ESTE ARQUIVO JA FOI USADO". Agora reserva orfa (compra inexistente, mais de 2 min) e apagada sozinha e o envio segue. -->
 <!-- v633 (16/10/2026): COMPRAS -- a trava de documento repetido recusava OS de OUTRO caminhao so por ter o mesmo item e valor (OS 2984 do QDE8C12 x compra 21, OS 3024 do QDG7I41, DN Eletrica, diagnostico R$ 250). Agora nao e repetido quando o no da OS e diferente ou quando a placa e diferente. Mesmo no de OS continua barrando. -->
@@ -1094,7 +1095,7 @@ function rdvEmbrulhar(sb) {
      e sobe na proxima abertura.
    - Nao grava dado de carga nem foto: so mensagem de erro e contexto.
    Consulta: Supabase > Table editor > rf_logs (so admin le).              */
-var RF_SISTEMA = { codigo: "RDV", nome: "Rodavia 360", versao: "v1" };
+var RF_SISTEMA = { codigo: "RDV", nome: "Rodavia 360", versao: "v2" };
 (function () {
   var FILA = "rf-logs-fila-v1", MAX = 50, enviando = false;
 
@@ -7669,13 +7670,13 @@ let state = {
   veiculos: carregar("rf-frota-veiculos-v4", frotaInicial),
   dividas: carregar("rf-frota-dividas-v1", dividasIniciais),
   viagens: carregar("rf-frota-viagens-v1", () => []),
-  clientes: carregar("rf-frota-clientes-v1", () => ["Leão", "JT/Mateus", "Mercante/JDL", "Yamaha"]),
+  clientes: carregar("rf-frota-clientes-v1", () => []),   // RDV v2: começa vazio (a lista antiga era da RF)
   manutencoes: carregar("rf-frota-manutencoes-v1", () => []),
   fechamentos: carregar("rf-frota-fechamentos-v1", () => ({})),
   frotaMes: carregar("rf-frota-frotames-v1", () => ({})),
   config: carregar("rf-frota-config-v1", () => ({ impostoPct: 6, impostoHist: [] })),
   almoxarifado: carregar("rf-frota-almox-v1", () => []),
-  tarifas: carregar("rf-frota-tarifas-v1", () => ({ "Mercante/JDL": { modo: "km", kmDefault: 4.80, km34: 4.30, m3: 0 } })),
+  tarifas: carregar("rf-frota-tarifas-v1", () => ({})),   // RDV v2: começa vazio (a tarifa antiga era da JDL/RF)
   oleoTrocas: carregar("rf-frota-oleotrocas-v1", () => []),
   usuarios: carregar("rf-frota-usuarios-v1", () => []),
   pagamentosMotorista: carregar("rf-frota-pagamotorista-v1", () => []),
