@@ -53,11 +53,11 @@ jobs:
 
       - name: Conferir chave de assinatura
         env:
-          RDV_KEYSTORE: ${{ secrets.RDV_KEYSTORE }}
+          RDV_KEYSTORE: ${{ secrets.RDV_CHAVE }}
           RDV_SENHA: ${{ secrets.RDV_SENHA }}
         run: |
           if [ -z "$RDV_KEYSTORE" ] || [ -z "$RDV_SENHA" ]; then
-            echo "::error::Faltam os segredos RDV_KEYSTORE e RDV_SENHA (Settings > Secrets and variables > Actions)."
+            echo "::error::Faltam os segredos RDV_CHAVE e RDV_SENHA (Settings > Secrets and variables > Actions)."
             exit 1
           fi
           mkdir -p "$RUNNER_TEMP/fab"
