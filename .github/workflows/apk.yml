@@ -1,0 +1,151 @@
+# RDV — Rodavia 360 — fabrica do APK (Android). So vale para o repositorio rodavia360.
+# Para gerar: aba Actions > "RDV - Gerar APK" > Run workflow.
+name: RDV - Gerar APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    if: github.repository == 'RFLOGISTICA/rodavia360'
+    runs-on: ubuntu-latest
+    env:
+      VERSAO_CODIGO: ${{ github.run_number }}
+      VERSAO_NOME: 1.0.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Gerar icones (a partir do icone.svg)
+        run: |
+          mkdir -p "$RUNNER_TEMP/ic" && cd "$RUNNER_TEMP/ic"
+          npm init -y > /dev/null
+          npm i sharp@0.33.5
+          cat > icones.js <<'FIM'
+          const sharp = require('sharp'), fs = require('fs'), W = process.argv[2];
+          const svg = fs.readFileSync(W + '/icone.svg', 'utf8');
+          const mask = svg.replace('viewBox="-60 -60 120 120"', 'viewBox="-70 -70 140 140"');
+          (async () => {
+            const r = (t, n, f) => sharp(Buffer.from(t), { density: 600 }).resize(n, n).png().toFile(W + '/' + f);
+            await r(svg, 192, 'icon-192.png');
+            await r(svg, 512, 'icon-512.png');
+            await r(mask, 512, 'icon-512-maskable.png');
+            console.log('icones gerados');
+          })().catch(e => { console.error(e); process.exit(1); });
+          FIM
+          node icones.js "$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "RDV Fabrica"
+          git config user.email "comercial@rflogistica.com.br"
+          git add icon-192.png icon-512.png icon-512-maskable.png
+          git diff --cached --quiet || (git commit -m "RDV: icones do app" && git push)
+
+      - name: Conferir chave de assinatura
+        env:
+          RDV_KEYSTORE: ${{ secrets.RDV_KEYSTORE }}
+          RDV_SENHA: ${{ secrets.RDV_SENHA }}
+        run: |
+          if [ -z "$RDV_KEYSTORE" ] || [ -z "$RDV_SENHA" ]; then
+            echo "::error::Faltam os segredos RDV_KEYSTORE e RDV_SENHA (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/fab"
+          echo "$RDV_KEYSTORE" | base64 -d > "$RUNNER_TEMP/fab/rodavia360.keystore"
+
+      - name: Gerar projeto Android
+        working-directory: ${{ runner.temp }}/fab
+        run: |
+          npm init -y > /dev/null
+          npm i @bubblewrap/core@1.24.1
+          cat > gerar.js <<'FIM'
+          const { TwaManifest, TwaGenerator, ConsoleLog } = require('@bubblewrap/core');
+          (async () => {
+            const pasta = process.argv[2], ic = process.argv[3];
+            const m = new TwaManifest({
+              packageId: 'br.com.rodavia360.app',
+              host: 'rodavia360.com.br',
+              name: 'Rodavia 360',
+              launcherName: 'Rodavia 360',
+              display: 'standalone',
+              orientation: 'portrait',
+              themeColor: '#0B0B0B',
+              navigationColor: '#0B0B0B',
+              navigationColorDark: '#0B0B0B',
+              navigationDividerColor: '#0B0B0B',
+              navigationDividerColorDark: '#0B0B0B',
+              backgroundColor: '#0B0B0B',
+              enableNotifications: false,
+              startUrl: '/',
+              iconUrl: ic + '/icon-512.png',
+              maskableIconUrl: ic + '/icon-512-maskable.png',
+              appVersion: process.env.VERSAO_NOME || '1.0.0',
+              appVersionCode: parseInt(process.env.VERSAO_CODIGO || '1', 10),
+              signingKey: { path: './rodavia360.keystore', alias: 'rodavia360' },
+              splashScreenFadeOutDuration: 300,
+              enableSiteSettingsShortcut: false,
+              isChromeOSOnly: false,
+              isMetaQuest: false,
+              fallbackType: 'customtabs',
+              features: {},
+              alphaDependencies: { enabled: false },
+              shortcuts: [],
+              generatorApp: 'rodavia360',
+              fullScopeUrl: 'https://rodavia360.com.br/',
+              minSdkVersion: 21,
+            });
+            const err = m.validate && m.validate();
+            if (err) { console.error('manifesto invalido:', err); process.exit(1); }
+            await new TwaGenerator().createTwaProject(pasta, m, new ConsoleLog('gerar'));
+            console.log('OK projeto gerado em', pasta);
+          })().catch(e => { console.error(e); process.exit(1); });
+          FIM
+          python3 -m http.server 8765 --directory "$GITHUB_WORKSPACE" > /dev/null 2>&1 &
+          SRV=$!
+          sleep 2
+          node gerar.js proj http://127.0.0.1:8765
+          kill $SRV
+
+      - name: Compilar
+        working-directory: ${{ runner.temp }}/fab/proj
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease bundleRelease
+
+      - name: Assinar
+        working-directory: ${{ runner.temp }}/fab
+        env:
+          RDV_SENHA: ${{ secrets.RDV_SENHA }}
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/zipalign" -f -p 4 proj/app/build/outputs/apk/release/app-release-unsigned.apk alinhado.apk
+          "$BT/apksigner" sign --ks rodavia360.keystore --ks-key-alias rodavia360 \
+            --ks-pass env:RDV_SENHA --key-pass env:RDV_SENHA --out Rodavia360.apk alinhado.apk
+          "$BT/apksigner" verify --print-certs Rodavia360.apk
+          cp proj/app/build/outputs/bundle/release/app-release.aab Rodavia360.aab
+          jarsigner -keystore rodavia360.keystore -storepass "$RDV_SENHA" -keypass "$RDV_SENHA" \
+            Rodavia360.aab rodavia360
+          rm -f rodavia360.keystore
+
+      - name: Publicar para baixar
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ env.VERSAO_NOME }}
+          name: Rodavia 360 — APK ${{ env.VERSAO_NOME }}
+          body: |
+            RDV — Rodavia 360 para Android, versao ${{ env.VERSAO_NOME }}.
+            Rodavia360.apk = instalar direto no celular.
+            Rodavia360.aab = para enviar a Google Play.
+          files: |
+            ${{ runner.temp }}/fab/Rodavia360.apk
+            ${{ runner.temp }}/fab/Rodavia360.aab
